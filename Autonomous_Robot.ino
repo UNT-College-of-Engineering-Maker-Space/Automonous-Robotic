@@ -6,10 +6,11 @@
 #include <Wire.h>
 #include <Adafruit_Sensor.h>
 #include <Adafruit_LSM303DLH_Mag.h> // Specific Magnetometer library for Magnetometer in use
-#include<Servo.h> // Controls the servos as well as the motors
+#include <Servo.h> // Controls the servos as well as the motors
+#include <NewPing.h>
 #include "./Definitions.h" // Includes all Definitions 
 
-BlynkTimer timers;
+//BlynkTimer timers;
 
 // Start GPS Code
 // If using hardware serial (e.g. Arduino Mega):
@@ -74,8 +75,9 @@ float geoDistance(struct GeoLoc &a, struct GeoLoc &b) {
   return R * y;
 }
 // Where the ping distances are stored.
-unsigned int cm[SONAR_NUM];
-unsigned int duration; 
+unsigned long pingTimer[SONAR_NUM]; // When each pings.
+unsigned int cm[SONAR_NUM]; // Store ping distances.
+uint8_t currentSensor = 0; // Which sensor is active.
 
 //Declare Servos and Motors
 Servo servo1; //servo1
@@ -83,6 +85,11 @@ Servo servo2; //servo2
 Servo motor1; //motor1
 Servo motor2; //motor2
 
+NewPing sonar[SONAR_NUM] = { // Sensor object array.
+  NewPing(40, 41, MAX_DISTANCE),
+  NewPing(42, 43, MAX_DISTANCE),
+  NewPing(44, 45, MAX_DISTANCE)
+};
 
 void setup() {
   pinMode(TRIGGER1, OUTPUT);
@@ -91,25 +98,32 @@ void setup() {
   pinMode(ECHO2, INPUT);
   pinMode(TRIGGER3, OUTPUT);
   pinMode(ECHO3, INPUT);
-  // Open serial communications and wait for port to open:
+  // Open serial communications
   Serial.begin(115200);
+  Serial.println("LSM303DLHC Magnetometer Test1"); Serial.println("");
   GPS.begin(9600);
   //Bluetooth 
   bluetoothSerial.begin(9600);
-  Blynk.begin(bluetoothSerial, auth);
   // Ping distance routine
   //PingTimer = timer.setInterval(250L, Sonar);
 
+  pingTimer[0] = millis() + 75; // First ping start in ms.
+  for (uint8_t i = 1; i < SONAR_NUM; i++)
+    pingTimer[i] = pingTimer[i - 1] + PING_INTERVAL;
+  
+  Serial.println("LSM303DLHC Magnetometer Test2"); Serial.println("");
+  Blynk.begin(bluetoothSerial, auth);
+  
+  Serial.println("LSM303DLHC Magnetometer Test3"); Serial.println("");
   servo1.attach(SERVO1);  // attaches servo1 to its defined pin
   servo2.attach(SERVO2);  // attaches servo2 to its defined pin
 
   motor1.attach(MOTOR1);  // attaches motor1 to its defined pin
   motor2.attach(MOTOR2);  // attaches motor2 to its defined pin
 
-  delay(1000); // delay one second
+  //delay(1000); // delay one second
   //start compass code
-  {
-    Serial.println("LSM303DLHC Magnetometer Test"); Serial.println("");
+    Serial.println("LSM303DLHC Magnetometer Test4"); Serial.println("");
   
     /* Initialise the sensor */
     if(!mag.begin())
@@ -121,13 +135,12 @@ void setup() {
   
   /* Display some basic information on this sensor */
   displaySensorDetails();
-  }
 
   // end compass code
 
   // start gps setup code
   // connect at 115200 so we can read the GPS fast enough and echo without dropping chars
-  Serial.begin(115200);
+  //Serial.begin(115200);
   Serial.println("Adafruit GPS library basic test!");
 
   // 9600 NMEA is the default baud rate for Adafruit GPS's - some use 4800
@@ -263,54 +276,28 @@ float Heading() {
     H2Degrees = headingDegrees;
     return H2Degrees;
     //delay(500);
-  }
+}
   // end compass code
+  
 void Sonar()
 {
-    // Pulse 1st Ultrasonic Sensor
-    digitalWrite(TRIGGER1, LOW);
-    delayMicroseconds(2);
-    digitalWrite(TRIGGER1, HIGH);
-    delayMicroseconds(10);
-    digitalWrite(TRIGGER1, LOW);
+  for (uint8_t i = 0; i < SONAR_NUM; i++) { // Loop through each sensor and display results.
+    delay(50); // Wait 50ms between pings (about 20 pings/sec). 29ms should be the shortest delay between pings.
+    cm[i] = sonar[i].ping_cm();
+  }
 
-    // End Pulse & Calculate distance
-    duration = pulseIn(ECHO1, HIGH);
-    cm[0] = (duration / 2) / 29.1;
+  Serial.print("Front sensor distance is ");
+  Serial.print(cm[0]);
+  Serial.println(" cm");
 
-    // Pulse 2nd Ultrasonic Sensor
-    digitalWrite(TRIGGER2, LOW);
-    delayMicroseconds(2);
-    digitalWrite(TRIGGER2, HIGH);
-    delayMicroseconds(10);
-    digitalWrite(TRIGGER2, LOW);
+  Serial.print("Left sensor distance is ");
+  Serial.print(cm[1]);
+  Serial.println(" cm");
 
-    // End Pulse & Calculate distance
-    duration = pulseIn(ECHO2, HIGH);
-    cm[1] = (duration / 2) / 29.1;
+  Serial.print("Right sensor distance is ");
+  Serial.print(cm[2]);
+  Serial.println(" cm");
 
-    // Pulse 3rd Ultrasonic Sensor
-    digitalWrite(TRIGGER3, LOW);
-    delayMicroseconds(2);
-    digitalWrite(TRIGGER3, HIGH);
-    delayMicroseconds(10);
-    digitalWrite(TRIGGER3, LOW);
-
-    // End Pulse & Calculate distance
-    duration = pulseIn(ECHO3, HIGH);
-    cm[2] = (duration / 2) / 29.1;
-
-    Serial.print("Front sensor distance is  ");
-    Serial.print(cm[0]);
-    Serial.println(" cm");
-
-    Serial.print("Left sensor distance is ");
-    Serial.print(cm[1]);
-    Serial.println(" cm");
-
-    Serial.print("Right sensor distance is ");
-    Serial.print(cm[2]);
-    Serial.println(" cm");
 }
 
 int SonarTimer;
@@ -591,5 +578,5 @@ BLYNK_WRITE(V1) {
 void loop()
 {
   Blynk.run();
-  timers.run();
+  //timers.run();
 }

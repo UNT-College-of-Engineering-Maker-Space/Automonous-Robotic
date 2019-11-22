@@ -1,6 +1,6 @@
 // Blynk Auth
-char auth[] = "vsBftYjEwxJMcEknPkNPBAvs1uIQB_i2";
-
+char auth[] = "vsBftYjEwxJMcEknPkNPBAvs1uIQB_i2"; //jorge phone
+//char auth[] = "ZltTLKOWzXGhahEvGLABvAwOoIbTJLHT"; //Alex's phone
 // Set GPSECHO to 'false' to turn off echoing the GPS data to the Serial console
 // Set to 'true' if you want to debug and listen to the raw GPS sentences. 
 #define GPSECHO  true
