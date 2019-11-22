@@ -152,8 +152,8 @@ void turnleft(){
   Serial.println("Turning Left ");
 }
 void turnright(){
-  motor1.writeMicroseconds(1700);
-  motor2.writeMicroseconds(1700);
+  motor1.writeMicroseconds(1600);  //1700
+  motor2.writeMicroseconds(1600);  //1700
   for (POS = 128; POS <= 150; POS += 1) { // goes from 122 degrees to 150 degrees
     // in steps of 1 degree
     servo1.write(POS);
@@ -186,7 +186,7 @@ void spin(){
 void forward(){
   servo1.write(128);  //140   <-- less turn
   servo2.write(128);  //140
-  motor1.writeMicroseconds(1600);  //1700
-  motor2.writeMicroseconds(1600);  //1700    <--  Full speed
+  motor1.writeMicroseconds(1550);  //1600    <--  half speed
+  motor2.writeMicroseconds(1550);  //1700    <--  Full speed
   Serial.println("Forward ");
 }
