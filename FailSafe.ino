@@ -186,7 +186,7 @@ void spin(){
 void forward(){
   servo1.write(128);  //140   <-- less turn
   servo2.write(128);  //140
-  motor1.writeMicroseconds(1550);  //1600    <--  half speed
-  motor2.writeMicroseconds(1550);  //1700    <--  Full speed
+  motor1.writeMicroseconds(1600);  //1600    <--  half speed
+  motor2.writeMicroseconds(1600);  //1700    <--  Full speed
   Serial.println("Forward ");
 }
