@@ -128,36 +128,18 @@ void motorstop(){
 void turnleftfast(){
   //motor1.writeMicroseconds(mspeedturn);
   //motor2.writeMicroseconds(mspeedturn);
-  for (POS = straight; POS >= ao_fast; POS -= 1) { 
-    // in steps of 1 degree
-    servo1.write(POS);
-    servo2.write(POS);// tell servo to go to Position in variable 'POS'
-    delay(30);                       // waits 15ms for the servo to reach the POSition
-  }
-  delay(SLIGHT_TURN);
-  for (POS = ao_fast; POS <= straight; POS += 1) { 
-    servo1.write(POS);
-    servo2.write(POS);// tell servo to go to POSition in variable 'POS'
-    delay(30);                       // waits 15ms for the servo to reach the POSition
-  }
+
+  turningalg(ao_fast, ai_fast);
+  
   delay(SLIGHT_TURN);
   Serial.println("Turning Left fastly ");
   }
 void turnleftslow(){
    //motor1.writeMicroseconds(mspeedturn);
   //motor2.writeMicroseconds(mspeedturn);
-  for (POS = straight; POS >= ao_slow ; POS -= 1) { 
-    // in steps of 1 degree
-    servo1.write(POS);
-    servo2.write(POS);// tell servo to go to Position in variable 'POS'
-    delay(30);                       // waits 15ms for the servo to reach the POSition
-  }
-  delay(SLIGHT_TURN);
-  for (POS = ao_slow ; POS <= straight; POS += 1) { 
-    servo1.write(POS);
-    servo2.write(POS);// tell servo to go to POSition in variable 'POS'
-    delay(30);                       // waits 15ms for the servo to reach the POSition
-  }
+  
+  turningalg(ao_slow, ai_slow);
+  
   delay(SLIGHT_TURN);
   Serial.println("Turning Left slowly ");
 
@@ -170,18 +152,9 @@ void turnleftslow(){
 void turnrightfast(){
   //motor1.writeMicroseconds(mspeedturn);  //1700
   //motor2.writeMicroseconds(mspeedturn);  //1700
-  for (POS = straight; POS <= ao_fast; POS += 1) { 
-    // in steps of 1 degree
-    servo1.write(POS);
-    servo2.write(POS);// tell servo to go to POSition in variable 'POS'
-    delay(30);                       // waits 15ms for the servo to reach the POSition
-  }
-  delay(SLIGHT_TURN);
-  for (POS = ao_fast; POS >= straight; POS -= 1) { 
-    servo1.write(POS);
-    servo2.write(POS);// tell servo to go to POSition in variable 'POS'
-    delay(30);                       // waits 15ms for the servo to reach the POSition
-  }
+  
+  turningalg(ai_fast, ao_fast);
+  
   delay(SLIGHT_TURN);
   Serial.println("Turning Right fastly ");
   }
@@ -189,18 +162,9 @@ void turnrightfast(){
 void turnrightslow(){ 
    //motor1.writeMicroseconds(mspeedturn);  //1700
   //motor2.writeMicroseconds(mspeedturn);  //1700
-  for (POS = straight; POS <= ao_slow; POS += 1) { 
-    // in steps of 1 degree
-    servo1.write(POS);
-    servo2.write(POS);// tell servo to go to POSition in variable 'POS'
-    delay(30);                       // waits 15ms for the servo to reach the POSition
-  }
-  delay(SLIGHT_TURN);
-  for (POS = ao_slow; POS >= straight; POS -= 1) { 
-    servo1.write(POS);
-    servo2.write(POS);// tell servo to go to POSition in variable 'POS'
-    delay(30);                       // waits 15ms for the servo to reach the POSition
-  }
+  
+  turningalg(ai_slow, ao_slow);
+  
   delay(SLIGHT_TURN);
   Serial.println("Turning Right slowly ");
   return;
