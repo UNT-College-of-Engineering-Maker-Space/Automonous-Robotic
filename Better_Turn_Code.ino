@@ -12,15 +12,12 @@ L is 50 cm
 R is the control varible to turn the randius 
 ai = arctan(L/(R - (T/2));
 ao = arctan(L/(R + (T/2));
-
 Fast Turn Mode
   ao = 21.1398
   ai = 49.2364
-
 Slow Turn Mode 
   ao = 6.4881
   ai = 8.0518
-
   Assumptions are that 128 is Straight.
 */
 #include <Servo.h> 
@@ -31,11 +28,9 @@ Slow Turn Mode
 #ifdef RH_HAVE_HARDWARE_SPI
 #include <SPI.h> // Not actually used but needed to compile
 #endif
-
 RH_ASK driver;
 // RH_ASK driver(2000, 4, 5, 0); // ESP8266 or ESP32: do not use pin 11 or 2
 // RH_ASK driver(2000, 3, 4, 0); // ATTiny, RX on D3 (pin 2 on attiny85) TX on D4 (pin 3 on attiny85), 
-
 */
 
 
@@ -82,36 +77,49 @@ void setup() {
 
 void loop() {
 
+motorcontrol(fwd);
+delay(10000);
+motorcontrol(bwd);
+delay(2000);
+
+/*
  motorcontrol(lslow);
  delay(2000);
+*/
  motorcontrol(lfast);
- delay(2000);
+ delay(1000);
+/*
  motorcontrol(rslow);
  delay(2000);
+*/
  motorcontrol(rfast);
- delay(2000);  
+ delay(1000);  
+
+
 }
 
 
 void backup(){
-  servo1.write(140);
-  servo2.write(140);
+  //servo1.write(128);
+  //servo2.write(128);
   motor1.writeMicroseconds(1300);
   motor2.writeMicroseconds(1300);
   Serial.println("Reversed ");
 }
+/*
 void spin(){
-  servo1.write(130);
-  servo2.write(130);
+  servo1.write(150);
+  servo2.write(150);
   motor1.writeMicroseconds(1300);
   motor2.writeMicroseconds(1300);
 }
+*/
 
 void forward(){
-  servo1.write(128);  //140   <-- less turn
-  servo2.write(128);  //140
-  motor1.writeMicroseconds(1600);  //1600    <--  half speed
-  motor2.writeMicroseconds(1600);  //1700    <--  Full speed
+  //servo1.write(128);  //140   <-- less turn
+  //servo2.write(128);  //140
+  motor1.writeMicroseconds(1700);  //1600    <--  half speed
+  motor2.writeMicroseconds(1700);  //1700    <--  Full speed
   Serial.println("Forward ");
 }
 
@@ -126,10 +134,10 @@ void motorstop(){
 
 
 void turnleftfast(){
-  //motor1.writeMicroseconds(mspeedturn);
-  //motor2.writeMicroseconds(mspeedturn);
+  motor1.writeMicroseconds(1700);
+  motor2.writeMicroseconds(1300);
 
-  turningalg(ao_fast, ai_fast);
+  //turningalg(ao_fast, ai_fast);
   
   delay(SLIGHT_TURN);
   Serial.println("Turning Left fastly ");
@@ -150,10 +158,10 @@ void turnleftslow(){
 
 
 void turnrightfast(){
-  //motor1.writeMicroseconds(mspeedturn);  //1700
-  //motor2.writeMicroseconds(mspeedturn);  //1700
+  motor1.writeMicroseconds(1300);  //1700
+  motor2.writeMicroseconds(1700);  //1700
   
-  turningalg(ai_fast, ao_fast);
+  //turningalg(ai_fast, ao_fast);
   
   delay(SLIGHT_TURN);
   Serial.println("Turning Right fastly ");
@@ -200,99 +208,111 @@ void motorcontrol(int dir){
 
 
 void turningalg(int ao_fast, int ai_fast){
+
+  Serial.println("HEY, IM IN THE TURNING LOOP NOW!!!!!!");
 // loop 1
 int currentao = straight;
 int currentai = straight;
-for ( POS = currentao; POS >= (1 *( ao_fast/ 8) + straight); POS -= 1) {
+int tolerance = 50;
+
+motor1.writeMicroseconds(1600);
+motor2.writeMicroseconds(1600);
+
+for ( POS = currentao - tolerance; POS >= (1 *( ao_fast/ 8) + straight); POS -= 1) {
   servo1.write(POS);
   delay(30);
+  Serial.println("loop1 fwd");
   currentao = (1 *( ao_fast/ 8) + straight);
 }
-for ( POS = currentai; POS >= (1*(ai_fast/ 8) + straight); POS -= 1) { 
+for ( POS = currentai - tolerance; POS >= (1*(ai_fast/ 8) + straight); POS -= 1) { 
   servo2.write(POS);
   delay(30);
+    Serial.println("loop2 fwd");
   currentai = (1*(ai_fast/ 8) + straight);
 }
 
 //loop 2 turn fwd
-for ( POS = currentao; POS >= (2 *( ao_fast/ 8) + straight); POS -= 1) {
+for ( POS = currentao - tolerance; POS >= (2 *( ao_fast/ 8) + straight); POS -= 1) {
   servo1.write(POS);
   delay(30);
+    Serial.println("loop3 fwd");
   currentao = (2 *( ao_fast/ 8) + straight);
 }
-for ( POS = currentai; POS >= (2 *(ai_fast/ 8) + straight); POS -= 1) { 
+for ( POS = currentai - tolerance; POS >= (2 *(ai_fast/ 8) + straight); POS -= 1) { 
   servo2.write(POS);
   delay(30);
   currentai = (2 *(ai_fast/ 8) + straight);
 }
 
 //loop 3 turn fwd
-for ( POS = currentao; POS >= (3 *( ao_fast/ 8) + straight); POS -= 1) {
+for ( POS = currentao - tolerance; POS >= (3 *( ao_fast/ 8) + straight); POS -= 1) {
   servo1.write(POS);
+   Serial.println("loop4 fwd");
   delay(30);
   currentao = (3 *( ao_fast/ 8) + straight);
 }
-for ( POS = currentai; POS >= (3 *(ai_fast/ 8) + straight); POS -= 1) { 
+for ( POS = currentai - tolerance; POS >= (3 *(ai_fast/ 8) + straight); POS -= 1) { 
   servo2.write(POS);
   delay(30);
+    Serial.println("loop5 fwd");
   currentai = (3 *(ai_fast/ 8) + straight);
 }
 
 //loop 4 turn fwd
-for ( POS = currentao; POS >= (4 *( ao_fast/ 8) + straight); POS -= 1) {
+for ( POS = currentao - tolerance; POS >= (4 *( ao_fast/ 8) + straight); POS -= 1) {
   servo1.write(POS);
   delay(30);
   currentao = (4 *( ao_fast/ 8) + straight);
 }
-for ( POS = currentai; POS >= (4 *(ai_fast/ 8) + straight); POS -= 1) { 
+for ( POS = currentai - tolerance; POS >= (4 *(ai_fast/ 8) + straight); POS -= 1) { 
   servo2.write(POS);
   delay(30);
   currentai = (4 *(ai_fast/ 8) + straight);
 }
 
 //loop 5 turn fwd
-for ( POS = currentao; POS >= (5 *( ao_fast/ 8) + straight); POS -= 1) {
+for ( POS = currentao - tolerance; POS >= (5 *( ao_fast/ 8) + straight); POS -= 1) {
   servo1.write(POS);
   delay(30);
   currentao = (5 *( ao_fast/ 8) + straight);
 }
-for ( POS = currentai; POS >= (5 *(ai_fast/ 8) + straight); POS -= 1) { 
+for ( POS = currentai - tolerance; POS >= (5 *(ai_fast/ 8) + straight); POS -= 1) { 
   servo2.write(POS);
   delay(30);
   currentai = (5 *(ai_fast/ 8) + straight);
 }
 
 //loop 6 turn fwd
-for ( POS = currentao; POS >= (6 *( ao_fast/ 8) + straight); POS -= 1) {
+for ( POS = currentao - tolerance; POS >= (6 *( ao_fast/ 8) + straight); POS -= 1) {
   servo1.write(POS);
   delay(30);
   currentao = (6 *( ao_fast/ 8) + straight);
 }
-for ( POS = currentai; POS >= (6 *(ai_fast/ 8) + straight); POS -= 1) { 
+for ( POS = currentai - tolerance; POS >= (6 *(ai_fast/ 8) + straight); POS -= 1) { 
   servo2.write(POS);
   delay(30);
   currentai = (6 *(ai_fast/ 8) + straight);
 }
 
 //loop 7 turn fwd
-for ( POS = currentao; POS >= (7 *( ao_fast/ 8) + straight); POS -= 1) {
+for ( POS = currentao - tolerance; POS >= (7 *( ao_fast/ 8) + straight); POS -= 1) {
   servo1.write(POS);
   delay(30);
   currentao = (7 *( ao_fast/ 8) + straight);
 }
-for ( POS = currentai; POS >= (7 *(ai_fast/ 8) + straight); POS -= 1) { 
+for ( POS = currentai - tolerance; POS >= (7 *(ai_fast/ 8) + straight); POS -= 1) { 
   servo2.write(POS);
   delay(30);
   currentai = (7 *(ai_fast/ 8) + straight);
 }
 
 //loop 8 turn fwd
-for ( POS = currentao; POS >= (8 *( ao_fast/ 8) + straight); POS -= 1) {
+for ( POS = currentao - tolerance; POS >= (8 *( ao_fast/ 8) + straight); POS -= 1) {
   servo1.write(POS);
   delay(30);
   currentao = (8 *( ao_fast/ 8) + straight);
 }
-for ( POS = currentai; POS >= (8 *(ai_fast/ 8) + straight); POS -= 1) { 
+for ( POS = currentai - tolerance; POS >= (8 *(ai_fast/ 8) + straight); POS -= 1) { 
   servo2.write(POS);
   delay(30);
   currentai = (8 *(ai_fast/ 8) + straight);
@@ -301,96 +321,96 @@ for ( POS = currentai; POS >= (8 *(ai_fast/ 8) + straight); POS -= 1) {
 delay(SLIGHT_TURN);
 
 //Write turning back part..  here.  
-for ( POS = currentao; POS <= (straight - (1 *( ao_fast/ 8))); POS += 1) {
+for ( POS = currentao - tolerance; POS <= (straight - (1 *( ao_fast/ 8))); POS += 1) {
   servo1.write(POS);
   delay(30);
   currentao = (straight - (1 *( ao_fast/ 8)));
 }
-for ( POS = currentai; POS <= (straight - (1 *( ai_fast/ 8))); POS += 1) { 
+for ( POS = currentai - tolerance; POS <= (straight - (1 *( ai_fast/ 8))); POS += 1) { 
   servo2.write(POS);
   delay(30);
   currentai = (straight - (1 *( ai_fast/ 8)));
 }
 
 //loop 2 turn back
-for ( POS = currentao; POS <= (straight - (2 *( ao_fast/ 8))); POS += 1) {
+for ( POS = currentao - tolerance; POS <= (straight - (2 *( ao_fast/ 8))); POS += 1) {
   servo1.write(POS);
   delay(30);
   currentao = (straight - (2 *( ao_fast/ 8)));
 }
-for ( POS = currentai; POS <= (straight - (2 *( ai_fast/ 8))); POS += 1) { 
+for ( POS = currentai - tolerance; POS <= (straight - (2 *( ai_fast/ 8))); POS += 1) { 
   servo2.write(POS);
   delay(30);
   currentai = (straight - (2 *( ai_fast/ 8)));
 }
 
 //loop 3 turn back
-for ( POS = currentao; POS <= (straight - (3 *( ao_fast/ 8))); POS += 1) {
+for ( POS = currentao - tolerance; POS <= (straight - (3 *( ao_fast/ 8))); POS += 1) {
   servo1.write(POS);
   delay(30);
   currentao = (straight - (3 *( ao_fast/ 8)));
 }
-for ( POS = currentai; POS <= (straight - (3 *( ai_fast/ 8))); POS += 1) { 
+for ( POS = currentai - tolerance; POS <= (straight - (3 *( ai_fast/ 8))); POS += 1) { 
   servo2.write(POS);
   delay(30);
   currentai = (straight - (3 *( ai_fast/ 8)));
 }
 
 //loop 4 turn back
-for ( POS = currentao; POS <= (straight - (4 *( ao_fast/ 8))); POS += 1) {
+for ( POS = currentao - tolerance; POS <= (straight - (4 *( ao_fast/ 8))); POS += 1) {
   servo1.write(POS);
   delay(30);
   currentao = (straight - (4 *( ao_fast/ 8)));
 }
-for ( POS = currentai; POS <= (straight - (4 *( ai_fast/ 8))); POS += 1) { 
+for ( POS = currentai - tolerance; POS <= (straight - (4 *( ai_fast/ 8))); POS += 1) { 
   servo2.write(POS);
   delay(30);
   currentai = (straight - (4 *( ai_fast/ 8)));
 }
 
 //loop 5 turn back
-for ( POS = currentao; POS <= (straight - (5 *( ao_fast/ 8))); POS += 1) {
+for ( POS = currentao - tolerance; POS <= (straight - (5 *( ao_fast/ 8))); POS += 1) {
   servo1.write(POS);
   delay(30);
   currentao = (straight - (5 *( ao_fast/ 8)));
 }
-for ( POS = currentai; POS <= (straight - (5 *( ai_fast/ 8))); POS += 1) { 
+for ( POS = currentai - tolerance; POS <= (straight - (5 *( ai_fast/ 8))); POS += 1) { 
   servo2.write(POS);
   delay(30);
   currentai = (straight - (5 *( ai_fast/ 8)));
 }
 
 //loop 6 turn back
-for ( POS = currentao; POS <= (straight - (6 *( ao_fast/ 8))); POS += 1) {
+for ( POS = currentao - tolerance; POS <= (straight - (6 *( ao_fast/ 8))); POS += 1) {
   servo1.write(POS);
   delay(30);
   currentao = (straight - (6 *( ao_fast/ 8)));
 }
-for ( POS = currentai; POS <= (straight - (6 *( ai_fast/ 8))); POS += 1) { 
+for ( POS = currentai - tolerance; POS <= (straight - (6 *( ai_fast/ 8))); POS += 1) { 
   servo2.write(POS);
   delay(30);
   currentai = (straight - (6 *( ai_fast/ 8)));
 }
 
 //loop 7 turn back
-for ( POS = currentao; POS <= (straight - (7 *( ao_fast/ 8))); POS += 1) {
+for ( POS = currentao - tolerance; POS <= (straight - (7 *( ao_fast/ 8))); POS += 1) {
   servo1.write(POS);
   delay(30);
   currentao = (straight - (7 *( ao_fast/ 8)));
 }
-for ( POS = currentai; POS <= (straight - (7 *( ai_fast/ 8))); POS += 1) { 
+for ( POS = currentai - tolerance; POS <= (straight - (7 *( ai_fast/ 8))); POS += 1) { 
   servo2.write(POS);
   delay(30);
   currentai = (straight - (7 *( ai_fast/ 8)));
 }
 
 //loop 8 turn back
-for ( POS = currentao; POS <= (straight - (8 *( ao_fast/ 8))); POS += 1) {
+for ( POS = currentao - tolerance; POS <= (straight - (8 *( ao_fast/ 8))); POS += 1) {
   servo1.write(POS);
   delay(30);
   currentao = (straight - (8 *( ao_fast/ 8)));
 }
-for ( POS = currentai; POS <= (straight - (8 *( ai_fast/ 8))); POS += 1) { 
+for ( POS = currentai - tolerance; POS <= (straight - (8 *( ai_fast/ 8))); POS += 1) { 
   servo2.write(POS);
   delay(30);
   currentai = (straight - (8 *( ai_fast/ 8)));
