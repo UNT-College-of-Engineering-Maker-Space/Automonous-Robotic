@@ -41,10 +41,10 @@ enum dir {fwd = 0, bwd, left, right};
 //Declaring the varible to setup the Servo1 and Servo2 calculations
 
 //bool fast = true;
-int mspeedfwd = 1600; //1700    <--  Full speed //1600 <-- Half speed
+int mspeedfwd = 1650; //1700    <--  Full speed //1600 <-- Half speed
 int mspeedbwd = 1400; //1300    <--  Full speed //1400 <-- Half speed
 int mspeedturn1 = 1550; //<-- fourth of the Full speed       NOTE: for safty turn the robot slowly. 
-int mspeedturn2 = 1450; 
+int mspeedturn2 = 1700; 
 
 //Declaring Motors as Servos 
 Servo motor1; //motor1
