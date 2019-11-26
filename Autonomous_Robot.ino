@@ -7,10 +7,8 @@
 #include <Adafruit_Sensor.h>
 #include <Adafruit_LSM303DLH_Mag.h> // Specific Magnetometer library for Magnetometer in use
 #include <Servo.h> // Controls the servos as well as the motors
-#include <NewPing.h>
+#include <NewPing.h> // Used for the ultrasonic sensors
 #include "./Definitions.h" // Includes all Definitions 
-
-//BlynkTimer timers;
 
 // Start GPS Code
 // If using hardware serial (e.g. Arduino Mega):
@@ -44,7 +42,7 @@ void displaySensorDetails(void)
   Serial.print  ("Unique ID:    "); Serial.println(sensor.sensor_id);
   Serial.print  ("Max Value:    "); Serial.print(sensor.max_value); Serial.println(" uT");
   Serial.print  ("Min Value:    "); Serial.print(sensor.min_value); Serial.println(" uT");
-  Serial.print  ("Resolution:   "); Serial.print(sensor.resolution); Serial.println(" uT");  
+  Serial.print  ("Resolution:   "); Serial.print(sensor.resolution); Serial.println(" uT");
   Serial.println("------------------------------------");
   Serial.println("");
   delay(500);
@@ -57,17 +55,17 @@ void displaySensorDetails(void)
 #endif
 
 float geoBearing(struct GeoLoc &a, struct GeoLoc &b) {
-  float y = sin(b.lon-a.lon) * cos(b.lat);
-  float x = cos(a.lat)*sin(b.lat) - sin(a.lat)*cos(b.lat)*cos(b.lon-a.lon);
+  float y = sin(b.Lon-a.Lon) * cos(b.Lat);
+  float x = cos(a.Lat)*sin(b.Lat) - sin(a.Lat)*cos(b.Lat)*cos(b.Lon-a.Lon);
   return atan2(y, x) * RADTODEG;
 }
 
 float geoDistance(struct GeoLoc &a, struct GeoLoc &b) {
   const float R = 6371000; // km
-  float p1 = a.lat * DEGTORAD;
-  float p2 = b.lat * DEGTORAD;
-  float dp = (b.lat-a.lat) * DEGTORAD;
-  float dl = (b.lon-a.lon) * DEGTORAD;
+  float p1 = a.Lat * DEGTORAD;
+  float p2 = b.Lat * DEGTORAD;
+  float dp = (b.Lat-a.Lat) * DEGTORAD;
+  float dl = (b.Lon-a.Lon) * DEGTORAD;
 
   float x = sin(dp/2) * sin(dp/2) + cos(p1) * cos(p2) * sin(dl/2) * sin(dl/2);
   float y = 2 * atan2(sqrt(x), sqrt(1-x));
@@ -75,9 +73,7 @@ float geoDistance(struct GeoLoc &a, struct GeoLoc &b) {
   return R * y;
 }
 // Where the ping distances are stored.
-unsigned long pingTimer[SONAR_NUM]; // When each pings.
 unsigned int cm[SONAR_NUM]; // Store ping distances.
-uint8_t currentSensor = 0; // Which sensor is active.
 
 //Declare Servos and Motors
 Servo servo1; //servo1
@@ -100,30 +96,20 @@ void setup() {
   pinMode(ECHO3, INPUT);
   // Open serial communications
   Serial.begin(115200);
-  Serial.println("LSM303DLHC Magnetometer Test1"); Serial.println("");
   GPS.begin(9600);
   //Bluetooth 
   bluetoothSerial.begin(9600);
-  // Ping distance routine
-  //PingTimer = timer.setInterval(250L, Sonar);
-
-  pingTimer[0] = millis() + 75; // First ping start in ms.
-  for (uint8_t i = 1; i < SONAR_NUM; i++)
-    pingTimer[i] = pingTimer[i - 1] + PING_INTERVAL;
   
-  Serial.println("LSM303DLHC Magnetometer Test2"); Serial.println("");
   Blynk.begin(bluetoothSerial, auth);
   
-  Serial.println("LSM303DLHC Magnetometer Test3"); Serial.println("");
   servo1.attach(SERVO1);  // attaches servo1 to its defined pin
   servo2.attach(SERVO2);  // attaches servo2 to its defined pin
 
   motor1.attach(MOTOR1);  // attaches motor1 to its defined pin
   motor2.attach(MOTOR2);  // attaches motor2 to its defined pin
 
-  //delay(1000); // delay one second
   //start compass code
-    Serial.println("LSM303DLHC Magnetometer Test4"); Serial.println("");
+    Serial.println("LSM303DLHC Magnetometer Test"); Serial.println("");
   
     /* Initialise the sensor */
     if(!mag.begin())
@@ -139,12 +125,7 @@ void setup() {
   // end compass code
 
   // start gps setup code
-  // connect at 115200 so we can read the GPS fast enough and echo without dropping chars
-  //Serial.begin(115200);
   Serial.println("Adafruit GPS library basic test!");
-
-  // 9600 NMEA is the default baud rate for Adafruit GPS's - some use 4800
-  GPS.begin(9600);
   
   // Uncomment this line to turn on RMC (recommended minimum) and GGA (fix data) including altitude
   GPS.sendCommand(PMTK_SET_NMEA_OUTPUT_RMCGGA);
@@ -275,7 +256,6 @@ float Heading() {
   
     H2Degrees = headingDegrees;
     return H2Degrees;
-    //delay(500);
 }
   // end compass code
   
@@ -283,7 +263,12 @@ void Sonar()
 {
   for (uint8_t i = 0; i < SONAR_NUM; i++) { // Loop through each sensor and display results.
     delay(50); // Wait 50ms between pings (about 20 pings/sec). 29ms should be the shortest delay between pings.
-    cm[i] = sonar[i].ping_cm();
+    if (sonar[i].ping_cm() == 0) {
+      cm[i] = MAX_DISTANCE;
+    }
+    else {
+      cm[i] = sonar[i].ping_cm();
+    }
   }
 
   Serial.print("Front sensor distance is ");
@@ -300,44 +285,7 @@ void Sonar()
 
 }
 
-int SonarTimer;
-
-/*void turning()
-{
-  Sonar();
-  while(cm[0]<FRONT_SENSOR || cm[1]<SIDE_SENSOR || cm[2]<SIDE_SENSOR) 
-  { 
-    char turndirection = scan(); // Goes to scan function to decide which way to turn based on l,r,s,b values.
-    switch (turndirection){
-    case 'l':
-      turnleft();
-      delay(SLIGHT_TURN);
-      break; // exits the case
-    case 'r':
-      turnright();
-      delay(SLIGHT_TURN);
-      break;
-    case 'b':
-      backup();
-      delay(SLIGHT_TURN);
-      break;
-    case 's':
-      spin();
-      break;
-      delay(SLIGHT_TURN);
-    }
-    Sonar();
-  }
-}*/
-
 //Driving the servo motors
-/*void go(){
-  servo1.write(90); //for now, we don't go anywhere, thus value is 90 for both which is stopped
-  servo2.write(90);
-  motor1.write(110);
-  motor2.write(110);  
-  Serial.println("Going forward  ");
-}*/
 
 void drive(int distance, float turn) {
   int fullSpeed = 1700;
@@ -369,28 +317,26 @@ void drive(int distance, float turn) {
   servo2.write(t);
   motor1.writeMicroseconds(autoThrottle);
   motor2.writeMicroseconds(autoThrottle);
-  delay(SLIGHT_TURN);
   Serial.println("Following Person");
 }
 
 void go(struct GeoLoc &loc, int timeout) {
-//  turning();
   gps1();
   GeoLoc robotLoc;
-  robotLoc.lat = GPS.latitude;
-  robotLoc.lon = GPS.longitude;
+  robotLoc.Lat = GPS.latitude / 100;
+  robotLoc.Lon = GPS.longitude / 100;
   Serial.println("Reading onboard GPS: ");
-  Serial.print(robotLoc.lat, 4); Serial.print(", "); Serial.println(robotLoc.lon, 4);
+  Serial.print(robotLoc.Lat, 4); Serial.print(", "); Serial.println(robotLoc.Lon, 4);
     
   bluetoothSerial.listen();
 
-  if (robotLoc.lat != 0 && robotLoc.lon != 0) {
+  if (robotLoc.Lat != 0 && robotLoc.Lon != 0) {
     float d = 0;
     //Start move loop here
     do {
       gps1();
-      robotLoc.lat = GPS.latitude;
-      robotLoc.lon = GPS.longitude;
+      robotLoc.Lat = GPS.latitude / 100;
+      robotLoc.Lon = GPS.longitude / 100;
       bluetoothSerial.listen();
       
       d = geoDistance(robotLoc, loc);
@@ -411,22 +357,22 @@ void go(struct GeoLoc &loc, int timeout) {
     while (d > 3.0 && timeout > 0);
       servo1.write(128);
       servo2.write(128);
-      motor1.writeMicroseconds(1700);
-      motor2.writeMicroseconds(1700);
+      motor1.writeMicroseconds(1600);
+      motor2.writeMicroseconds(1600);
   }
 }
 
 void turnleft(){
-  motor1.writeMicroseconds(1700);
-  motor2.writeMicroseconds(1700);
-  for (POS = 128; POS >= 94; POS -= 1) { // goes from 122 degrees to 94 degrees
+  motor1.writeMicroseconds(1600);
+  motor2.writeMicroseconds(1600);
+  for (POS = 128; POS >= 94; POS -= 1) { // goes from 128 degrees to 94 degrees
     // in steps of 1 degree
     servo1.write(POS);
     servo2.write(POS);// tell servo to go to Position in variable 'POS'
     delay(30);                       // waits 15ms for the servo to reach the POSition
   }
   delay(SLIGHT_TURN);
-  for (POS = 94; POS <= 128; POS += 1) { // goes from 94 degrees to 122 degrees
+  for (POS = 94; POS <= 128; POS += 1) { // goes from 94 degrees to 128 degrees
     servo1.write(POS);
     servo2.write(POS);// tell servo to go to POSition in variable 'POS'
     delay(30);                       // waits 15ms for the servo to reach the POSition
@@ -435,16 +381,16 @@ void turnleft(){
   Serial.println("Turning Left ");
 }
 void turnright(){
-  motor1.writeMicroseconds(1700);
-  motor2.writeMicroseconds(1700);
-  for (POS = 128; POS <= 150; POS += 1) { // goes from 122 degrees to 150 degrees
+  motor1.writeMicroseconds(1600);
+  motor2.writeMicroseconds(1600);
+  for (POS = 128; POS <= 150; POS += 1) { // goes from 128 degrees to 150 degrees
     // in steps of 1 degree
     servo1.write(POS);
     servo2.write(POS);// tell servo to go to POSition in variable 'POS'
     delay(30);                       // waits 15ms for the servo to reach the POSition
   }
   delay(SLIGHT_TURN);
-  for (POS = 150; POS >= 128; POS -= 1) { // goes from 150 degrees to 122 degrees
+  for (POS = 150; POS >= 128; POS -= 1) { // goes from 150 degrees to 128 degrees
     servo1.write(POS);
     servo2.write(POS);// tell servo to go to POSition in variable 'POS'
     delay(30);                       // waits 15ms for the servo to reach the POSition
@@ -453,15 +399,15 @@ void turnright(){
   Serial.println("Turning Right ");
 }
 void backup(){
-  servo1.write(140);
-  servo2.write(140);
+  servo1.write(128);
+  servo2.write(128);
   motor1.writeMicroseconds(1300);
   motor2.writeMicroseconds(1300);
   Serial.println("Reversed ");
 }
 void spin(){
-  servo1.write(130);
-  servo2.write(130);
+  servo1.write(160);
+  servo2.write(160);
   motor1.writeMicroseconds(1300);
   motor2.writeMicroseconds(1300);
 }
@@ -496,9 +442,6 @@ BLYNK_WRITE(V0) {
   Sonar();
   if (cm[0]<FRONT_SENSOR || cm[1]<SIDE_SENSOR || cm[2]<SIDE_SENSOR)
   {
-    //delay(15000);
-    //motor1.writeMicroseconds(1700);
-    //motor2.writeMicroseconds(1700);
     char turndirection = scan(); // Goes to scan function to decide which way to turn based on l,r,s,b values.
     switch (turndirection){
     case 'l':
@@ -528,8 +471,8 @@ BLYNK_WRITE(V0) {
     Serial.print(gps.getLat(), 4); Serial.print(", "); Serial.println(gps.getLon(), 4);
     
     GeoLoc phoneLoc;
-    phoneLoc.lat = gps.getLat();
-    phoneLoc.lon = gps.getLon();
+    phoneLoc.Lat = gps.getLat();
+    phoneLoc.Lon = gps.getLon();
 
     go(phoneLoc, GPS_STREAM_TIMEOUT);
   }
@@ -556,15 +499,15 @@ BLYNK_WRITE(V1) {
          lonStr = rawInput.substring(commaIndex+1, colonIndex);
       }
     
-      float lat = latStr.toFloat();
-      float lon = lonStr.toFloat();
+      float Lat = latStr.toFloat();
+      float Lon = lonStr.toFloat();
     
-      if (lat != 0 && lon != 0) {
+      if (Lat != 0 && Lon != 0) {
         GeoLoc waypoint;
-        waypoint.lat = lat;
-        waypoint.lon = lon;
+        waypoint.Lat = Lat;
+        waypoint.Lon = Lon;
     
-        Serial.print("Waypoint found: "); Serial.print(lat); Serial.println(lon);
+        Serial.print("Waypoint found: "); Serial.print(Lat); Serial.println(Lon);
         go(waypoint, GPS_WAYPOINT_TIMEOUT);
       }
     }
@@ -578,5 +521,4 @@ BLYNK_WRITE(V1) {
 void loop()
 {
   Blynk.run();
-  //timers.run();
 }
