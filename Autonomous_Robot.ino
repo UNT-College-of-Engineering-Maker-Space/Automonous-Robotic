@@ -10,6 +10,8 @@
 #include <NewPing.h> // Used for the ultrasonic sensors
 #include "./Definitions.h" // Includes all Definitions 
 
+WidgetTerminal terminal(V1);
+
 // Start GPS Code
 // If using hardware serial (e.g. Arduino Mega):
 //   Connect the GPS TX (transmit) pin to Arduino RX1, RX2 or RX3
@@ -45,6 +47,7 @@ void displaySensorDetails(void)
   Serial.print  ("Resolution:   "); Serial.print(sensor.resolution); Serial.println(" uT");
   Serial.println("------------------------------------");
   Serial.println("");
+  
   delay(500);
 }
 // end compass code
@@ -101,6 +104,8 @@ void setup() {
   bluetoothSerial.begin(9600);
   
   Blynk.begin(bluetoothSerial, auth);
+
+  terminal.clear();
   
   servo1.attach(SERVO1);  // attaches servo1 to its defined pin
   servo2.attach(SERVO2);  // attaches servo2 to its defined pin
@@ -211,7 +216,7 @@ void gps1() {
       Serial.print("Fix: "); Serial.print((int)GPS.fix);
       Serial.print(" quality: "); Serial.println((int)GPS.fixquality); 
       if (GPS.fix) {
-        Serial.print("Location: ");
+        Serial.print("Location (DDMM.MMMM Format): ");
         Serial.print(GPS.latitude, 4); Serial.print(GPS.lat);
         Serial.print(", "); 
         Serial.print(GPS.longitude, 4); Serial.println(GPS.lon);
@@ -235,7 +240,11 @@ float Heading() {
     Serial.print("X: "); Serial.print(event.magnetic.x); Serial.print("  ");
     Serial.print("Y: "); Serial.print(event.magnetic.y); Serial.print("  ");
     Serial.print("Z: "); Serial.print(event.magnetic.z); Serial.print("  ");Serial.println("uT");
+    terminal.print("X: "); terminal.print(event.magnetic.x); terminal.print("  ");
+    terminal.print("Y: "); terminal.print(event.magnetic.y); terminal.print("  ");
+    terminal.print("Z: "); terminal.print(event.magnetic.z); terminal.print("  ");terminal.println("uT");
     delay(500);
+    terminal.flush();
     
     // Hold the module so that Z is pointing 'up' and you can measure the heading with x&y
     // Calculate heading when the magnetometer is level, then correct for signs of axis.
@@ -283,6 +292,19 @@ void Sonar()
   Serial.print(cm[2]);
   Serial.println(" cm");
 
+  terminal.print("Front sensor distance is ");
+  terminal.print(cm[0]);
+  terminal.println(" cm");
+
+  terminal.print("Left sensor distance is ");
+  terminal.print(cm[1]);
+  terminal.println(" cm");
+
+  terminal.print("Right sensor distance is ");
+  terminal.print(cm[2]);
+  terminal.println(" cm");
+
+  terminal.flush();
 }
 
 //Driving the servo motors
@@ -313,20 +335,50 @@ void drive(int distance, float turn) {
   Serial.print("Original: ");
   Serial.println(turn);
 
+  terminal.print("Turn: ");
+  terminal.println(t);
+  terminal.print("Original: ");
+  terminal.println(turn);
+
   servo1.write(t);
   servo2.write(t);
   motor1.writeMicroseconds(autoThrottle);
   motor2.writeMicroseconds(autoThrottle);
   Serial.println("Following Person");
+  terminal.println("Following Person");
+
+  terminal.flush();
 }
+
+float degWhole; //Variable for the whole part of position 
+float degDec;  //Variable for the decimal part of degree
 
 void go(struct GeoLoc &loc, int timeout) {
   gps1();
   GeoLoc robotLoc;
-  robotLoc.Lat = GPS.latitude / 100;
-  robotLoc.Lon = GPS.longitude / 100;
+
+  robotLoc.Lat = GPS.latitude;
+  degWhole = float(int(robotLoc.Lat/100)); //gives me the whole degree part of Longitude
+  degDec = (robotLoc.Lat - degWhole*100)/60; //give me fractional part of longitude
+  robotLoc.Lat = degWhole + degDec; //If in Southern Hemisphere, latitude should be negative
+  if (GPS.lat == 'S') {
+    robotLoc.Lat = -robotLoc.Lat;
+  }
+  
+  robotLoc.Lon = GPS.longitude;
+  degWhole = float(int(robotLoc.Lon/100)); //gives me the whole degree part of Longitude
+  degDec = (robotLoc.Lon - degWhole*100)/60; //give me fractional part of longitude
+  robotLoc.Lon = degWhole + degDec; //If in Western Hemisphere, longitude should be negative
+  
+  if (GPS.lon == 'W') {
+    robotLoc.Lon = -robotLoc.Lon;
+  }
+  
   Serial.println("Reading onboard GPS: ");
   Serial.print(robotLoc.Lat, 4); Serial.print(", "); Serial.println(robotLoc.Lon, 4);
+
+  terminal.println("Reading onboard GPS: ");
+  terminal.print(robotLoc.Lat); terminal.print(", "); terminal.println(robotLoc.Lon);
     
   bluetoothSerial.listen();
 
@@ -335,21 +387,45 @@ void go(struct GeoLoc &loc, int timeout) {
     //Start move loop here
     do {
       gps1();
-      robotLoc.Lat = GPS.latitude / 100;
-      robotLoc.Lon = GPS.longitude / 100;
+      robotLoc.Lat = GPS.latitude;
+      degWhole = float(int(robotLoc.Lat/100)); //gives me the whole degree part of Longitude
+      degDec = (robotLoc.Lat - degWhole*100)/60; //give me fractional part of longitude
+      robotLoc.Lat = degWhole + degDec; //Gives complete correct decimal form of Longitude degrees
+      if (GPS.lat == 'S') { //If in Southern Hemisphere, latitude should be negative
+        robotLoc.Lat = -robotLoc.Lat;
+      }
+  
+      robotLoc.Lon = GPS.longitude;
+      degWhole = float(int(robotLoc.Lon/100)); //gives me the whole degree part of Longitude
+      degDec = (robotLoc.Lon - degWhole*100)/60; //give me fractional part of longitude
+      robotLoc.Lon = degWhole + degDec; //Gives complete correct decimal form of Longitude degrees
+  
+      if (GPS.lon == 'W') { //If in Western Hemisphere, longitude should be negative
+        robotLoc.Lon = -robotLoc.Lon;
+      }
+  
       bluetoothSerial.listen();
       
       d = geoDistance(robotLoc, loc);
       float t = geoBearing(robotLoc, loc) - Heading();
       
       Serial.print("Distance: ");
-      Serial.println(geoDistance(robotLoc, loc));
+      Serial.println(d);
     
       Serial.print("Bearing: ");
       Serial.println(geoBearing(robotLoc, loc));
 
       Serial.print("Heading: ");
       Serial.println(Heading());
+
+      terminal.print("Distance: ");
+      terminal.println(d);
+    
+      terminal.print("Bearing: ");
+      terminal.println(geoBearing(robotLoc, loc));
+
+      terminal.print("Heading: ");
+      terminal.println(Heading());
       
       drive(d, t);
       timeout -= 1;
@@ -357,9 +433,10 @@ void go(struct GeoLoc &loc, int timeout) {
     while (d > 3.0 && timeout > 0);
       servo1.write(128);
       servo2.write(128);
-      motor1.writeMicroseconds(1600);
-      motor2.writeMicroseconds(1600);
+      motor1.writeMicroseconds(1500);
+      motor2.writeMicroseconds(1500);
   }
+  terminal.flush();
 }
 
 void turnleft(){
@@ -379,6 +456,8 @@ void turnleft(){
   }
   delay(SLIGHT_TURN);
   Serial.println("Turning Left ");
+  terminal.println("Turning Left ");
+  terminal.flush();
 }
 void turnright(){
   motor1.writeMicroseconds(1600);
@@ -397,6 +476,8 @@ void turnright(){
   }
   delay(SLIGHT_TURN);
   Serial.println("Turning Right ");
+  terminal.println("Turning Right ");
+  terminal.flush();
 }
 void backup(){
   servo1.write(128);
@@ -404,6 +485,8 @@ void backup(){
   motor1.writeMicroseconds(1300);
   motor2.writeMicroseconds(1300);
   Serial.println("Reversed ");
+  terminal.println("Reversed ");
+  terminal.flush();
 }
 void spin(){
   servo1.write(160);
@@ -469,6 +552,10 @@ BLYNK_WRITE(V0) {
     Serial.println("Received remote GPS: ");
     // Print 4 decimal places for Lat and Lon
     Serial.print(gps.getLat(), 4); Serial.print(", "); Serial.println(gps.getLon(), 4);
+
+    terminal.println("Received remote GPS: ");
+    // Print 4 decimal places for Lat and Lon
+    terminal.print(gps.getLat()); terminal.print(", "); terminal.println(gps.getLon());
     
     GeoLoc phoneLoc;
     phoneLoc.Lat = gps.getLat();
@@ -476,6 +563,7 @@ BLYNK_WRITE(V0) {
 
     go(phoneLoc, GPS_STREAM_TIMEOUT);
   }
+  terminal.flush();
 }
 
 // Terminal Hook
