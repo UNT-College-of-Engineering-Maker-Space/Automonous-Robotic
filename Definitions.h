@@ -3,7 +3,7 @@ char auth[] = "vsBftYjEwxJMcEknPkNPBAvs1uIQB_i2"; //jorge phone
 //char auth[] = "ZltTLKOWzXGhahEvGLABvAwOoIbTJLHT"; //Alex's phone
 // Set GPSECHO to 'false' to turn off echoing the GPS data to the Serial console
 // Set to 'true' if you want to debug and listen to the raw GPS sentences. 
-#define GPSECHO  true
+#define GPSECHO  false
 
 //Declare Sensors
 #define TRIGGER1 40 //front
@@ -19,28 +19,28 @@ char auth[] = "vsBftYjEwxJMcEknPkNPBAvs1uIQB_i2"; //jorge phone
 //Declare Servos
 #define SLIGHT_TURN 500 //number of milliseconds to hold turn when turning
 #define FULL_TURN 0 // number of milliseconds to turn completely around
-#define SERVO1 2  //pin number for servo1
-#define SERVO2 3  //pin number for servo2
-#define MOTOR1 4  //pin number for motor1
-#define MOTOR2 5  //pin number for motor2
+#define POS_LEFT 85  //position of the left servo to be at 90 degrees
+#define POS_RIGHT 70  //position of the right servo to be at 90 degrees
+#define SERVO1 3  //pin number for right servo
+#define SERVO2 2  //pin number for left servo
+#define MOTOR1 4  //pin number for left servo
+#define MOTOR2 5  //pin number for right servo
 
+//Remove RX and TX pins when uploading, otherwise the GPS module will stop working overtime.
 //If using software serial uncomment below and pick pins:
 //#define GPS_TX_PIN 6
 //#define GPS_RX_PIN 7
 
-//Declare Sensor Limits
-#define FRONT_SENSOR 60// starts to turn
-#define SIDE_SENSOR 35// starts to turn
+//Declare Sensor Limits In Centimeters
+#define FRONT_SENSOR 70 // starts to turn
+#define SIDE_SENSOR 35 // starts to turn
 
 #define FRONT_SENSOR_REVERSE 50  //Reverses when this close to the front sensor
 #define SIDE_SENSOR_REVERSE 20 //Reverses when this close to a side sensor
 
+// Removex RX and TX pins when uploading, otherwise the bluetooth module will stop working overtime
 #define BLUETOOTH_TX_PIN 10
-#define BLUETOOTH_RX_PIN 9
-
-// If one motor tends to spin faster than the other, add offset
-#define MOTOR_A_OFFSET 0
-#define MOTOR_B_OFFSET 0
+#define BLUETOOTH_RX_PIN 11
 
 // You must then add your 'Declination Angle' to the compass, which is the 'Error' of the magnetic field in your location.
 // Can be found using this website: http://www.magnetic-declination.com/
@@ -60,6 +60,6 @@ char auth[] = "vsBftYjEwxJMcEknPkNPBAvs1uIQB_i2"; //jorge phone
 #define COMPASS_OFFSET 0.0f
 
 struct GeoLoc {
-  float lat;
-  float lon;
+  float Lat;
+  float Lon;
 };

@@ -28,7 +28,7 @@ SoftwareSerial bluetoothSerial(BLUETOOTH_TX_PIN, BLUETOOTH_RX_PIN);
 boolean usingInterrupt = false;
 void useInterrupt(boolean);
 // end gps code
-int POS = 0;
+int POS = 90;
 //start compass code
 int H2Degrees;
 /* Assign a unique ID to this sensor at the same time */
@@ -198,7 +198,7 @@ void gps1() {
     }
 
     // if millis() or timer wraps around, we'll just reset it
-    if (timer > millis())  timer = millis();
+/*    if (timer > millis())  timer = millis();
 
     // approximately every 2 seconds or so, print out the current stats
     if (millis() - timer > 2000) { 
@@ -227,7 +227,7 @@ void gps1() {
         Serial.print("Altitude: "); Serial.println(GPS.altitude);
         Serial.print("Satellites: "); Serial.println((int)GPS.satellites);
       }
-    }
+    }*/
   }
   
   //start compass code
@@ -243,7 +243,7 @@ float Heading() {
     terminal.print("X: "); terminal.print(event.magnetic.x); terminal.print("  ");
     terminal.print("Y: "); terminal.print(event.magnetic.y); terminal.print("  ");
     terminal.print("Z: "); terminal.print(event.magnetic.z); terminal.print("  ");terminal.println("uT");
-    delay(500);
+    //delay(500);
     terminal.flush();
     
     // Hold the module so that Z is pointing 'up' and you can measure the heading with x&y
@@ -314,7 +314,8 @@ void drive(int distance, float turn) {
   int stopSpeed = 1500;
   int reverseSpeed = 1300;
   float t = turn;
-
+  float left = 0.00;
+  float right = 0.00;
   while (t < -180) t += 180;
   while (t >  180) t -= 180;
   // drive to location
@@ -329,7 +330,7 @@ void drive(int distance, float turn) {
   }
   
   int autoThrottle = constrain(s, reverseSpeed, fullSpeed);
-  
+
   Serial.print("Turn: ");
   Serial.println(t);
   Serial.print("Original: ");
@@ -339,9 +340,17 @@ void drive(int distance, float turn) {
   terminal.println(t);
   terminal.print("Original: ");
   terminal.println(turn);
+  if (t < 20) {
+    t = 20;
+  }
+  else if (t > 160) {
+   t = 160; 
+  }
+  left = t - (90-POS_LEFT);
+  right = t - (90-POS_RIGHT);
 
-  servo1.write(t);
-  servo2.write(t);
+  servo1.write(left);
+  servo2.write(right);
   motor1.writeMicroseconds(autoThrottle);
   motor2.writeMicroseconds(autoThrottle);
   Serial.println("Following Person");
@@ -385,12 +394,12 @@ void go(struct GeoLoc &loc, int timeout) {
   if (robotLoc.Lat != 0 && robotLoc.Lon != 0) {
     float d = 0;
     //Start move loop here
-    do {
+    //do {
       gps1();
       robotLoc.Lat = GPS.latitude;
-      degWhole = float(int(robotLoc.Lat/100)); //gives me the whole degree part of Longitude
-      degDec = (robotLoc.Lat - degWhole*100)/60; //give me fractional part of longitude
-      robotLoc.Lat = degWhole + degDec; //Gives complete correct decimal form of Longitude degrees
+      degWhole = float(int(robotLoc.Lat/100)); //gives me the whole degree part of Latitude
+      degDec = (robotLoc.Lat - degWhole*100)/60; //give me fractional part of latitudde
+      robotLoc.Lat = degWhole + degDec; //Gives complete correct decimal form of latitude degrees
       if (GPS.lat == 'S') { //If in Southern Hemisphere, latitude should be negative
         robotLoc.Lat = -robotLoc.Lat;
       }
@@ -429,12 +438,11 @@ void go(struct GeoLoc &loc, int timeout) {
       
       drive(d, t);
       timeout -= 1;
-    } 
-    while (d > 3.0 && timeout > 0);
+    /*} while (d > 3.0 && timeout > 0);
       servo1.write(128);
       servo2.write(128);
       motor1.writeMicroseconds(1500);
-      motor2.writeMicroseconds(1500);
+      motor2.writeMicroseconds(1500);*/
   }
   terminal.flush();
 }
@@ -442,7 +450,11 @@ void go(struct GeoLoc &loc, int timeout) {
 void turnleft(){
   motor1.writeMicroseconds(1600);
   motor2.writeMicroseconds(1600);
-  for (POS = 128; POS >= 94; POS -= 1) { // goes from 128 degrees to 94 degrees
+  
+  servo1.write(POS_LEFT - 40);
+  servo2.write(POS_RIGHT - 40);
+  
+  /*for (POS = 128; POS >= 94; POS -= 1) { // goes from 128 degrees to 94 degrees
     // in steps of 1 degree
     servo1.write(POS);
     servo2.write(POS);// tell servo to go to Position in variable 'POS'
@@ -453,8 +465,8 @@ void turnleft(){
     servo1.write(POS);
     servo2.write(POS);// tell servo to go to POSition in variable 'POS'
     delay(30);                       // waits 15ms for the servo to reach the POSition
-  }
-  delay(SLIGHT_TURN);
+  }*/
+  //delay(SLIGHT_TURN);
   Serial.println("Turning Left ");
   terminal.println("Turning Left ");
   terminal.flush();
@@ -462,7 +474,9 @@ void turnleft(){
 void turnright(){
   motor1.writeMicroseconds(1600);
   motor2.writeMicroseconds(1600);
-  for (POS = 128; POS <= 150; POS += 1) { // goes from 128 degrees to 150 degrees
+  servo1.write(POS_LEFT + 40);
+  servo2.write(POS_RIGHT + 40);
+  /*for (POS = 128; POS <= 150; POS += 1) { // goes from 128 degrees to 150 degrees
     // in steps of 1 degree
     servo1.write(POS);
     servo2.write(POS);// tell servo to go to POSition in variable 'POS'
@@ -473,15 +487,15 @@ void turnright(){
     servo1.write(POS);
     servo2.write(POS);// tell servo to go to POSition in variable 'POS'
     delay(30);                       // waits 15ms for the servo to reach the POSition
-  }
-  delay(SLIGHT_TURN);
+  }*/
+  //delay(SLIGHT_TURN);
   Serial.println("Turning Right ");
   terminal.println("Turning Right ");
   terminal.flush();
 }
 void backup(){
-  servo1.write(128);
-  servo2.write(128);
+  servo1.write(POS_LEFT);
+  servo2.write(POS_RIGHT);
   motor1.writeMicroseconds(1300);
   motor2.writeMicroseconds(1300);
   Serial.println("Reversed ");
@@ -489,8 +503,8 @@ void backup(){
   terminal.flush();
 }
 void spin(){
-  servo1.write(160);
-  servo2.write(160);
+  servo1.write(POS_LEFT + 50);
+  servo2.write(POS_RIGHT + 50);
   motor1.writeMicroseconds(1300);
   motor2.writeMicroseconds(1300);
 }
@@ -529,20 +543,20 @@ BLYNK_WRITE(V0) {
     switch (turndirection){
     case 'l':
       turnleft();
-      delay(SLIGHT_TURN);
+      //delay(SLIGHT_TURN);
       break; // exits the case
     case 'r':
       turnright();
-      delay(SLIGHT_TURN);
+      //delay(SLIGHT_TURN);
       break;
     case 'b':
       backup();
-      delay(SLIGHT_TURN);
+      //delay(SLIGHT_TURN);
       break;
     case 's':
       spin();
       break;
-      delay(SLIGHT_TURN);
+      //delay(SLIGHT_TURN);
     }
   }
   else
@@ -557,13 +571,14 @@ BLYNK_WRITE(V0) {
     // Print 4 decimal places for Lat and Lon
     terminal.print(gps.getLat()); terminal.print(", "); terminal.println(gps.getLon());
     
+    terminal.flush();
+    
     GeoLoc phoneLoc;
     phoneLoc.Lat = gps.getLat();
     phoneLoc.Lon = gps.getLon();
 
     go(phoneLoc, GPS_STREAM_TIMEOUT);
   }
-  terminal.flush();
 }
 
 // Terminal Hook
