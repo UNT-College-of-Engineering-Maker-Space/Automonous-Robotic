@@ -620,6 +620,27 @@ BLYNK_WRITE(V1) {
   } while (colonIndex != -1);
 }
 
+BLYNK_WRITE(V2) {
+  int left = 0;
+  int right = 0;
+  int x = param[0].asInt();
+  int y = param[1].asInt();
+  while ((x!=90)&&(y!=1500)){
+    left = x - (90-POS_LEFT);
+    right = x - (90-POS_RIGHT);
+
+    servo1.write(left);
+    servo2.write(right);
+    motor1.writeMicroseconds(y);
+    motor2.writeMicroseconds(y);
+    // Do something with x and y
+    Serial.print("X = ");
+    Serial.print(x);
+    Serial.print("; Y = ");
+    Serial.println(y);
+    delay(100);
+  }
+}
 
 void loop()
 {
