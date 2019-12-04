@@ -634,7 +634,6 @@ BLYNK_WRITE(V2) {
     right = joystick_x - (90-POS_RIGHT);
     servo1.write(left);
     servo2.write(right);
-    if
     motor1.writeMicroseconds(joystick_y);
     motor2.writeMicroseconds(joystick_y);
     // Printing x and y values helps for debugging of the joystick
