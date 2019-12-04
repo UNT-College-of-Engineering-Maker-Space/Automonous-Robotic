@@ -10,7 +10,7 @@
 #include <NewPing.h> // Used for the ultrasonic sensors
 #include "./Definitions.h" // Includes all Definitions 
 
-WidgetTerminal terminal(V1);
+WidgetTerminal terminal(V1); // Allows us to print onto the Blynk app terminal
 
 // Start GPS Code
 // If using hardware serial (e.g. Arduino Mega):
@@ -21,17 +21,22 @@ Adafruit_GPS GPS(&Serial3); //pins 15(RX) and 14(TX)
 //SoftwareSerial mySerial(GPS_TX_PIN, GPS_RX_PIN);
 //Adafruit_GPS GPS(&mySerial);
 
+// Sets the RX and TX pins that the Bluetooth module will be using
 SoftwareSerial bluetoothSerial(BLUETOOTH_TX_PIN, BLUETOOTH_RX_PIN);
 
-// this keeps track of whether we're using the interrupt
-// off by default!
+// This keeps track of whether we're using the interrupt
+// Off by default!
 boolean usingInterrupt = false;
 void useInterrupt(boolean);
 // end gps code
+
 int POS = 90;
+int joystick_x = 0;
+int joystick_y = 0;
+
 //start compass code
 int H2Degrees;
-/* Assign a unique ID to this sensor at the same time */
+// Assign a unique ID to this sensor at the same time
 Adafruit_LSM303DLH_Mag_Unified mag = Adafruit_LSM303DLH_Mag_Unified(12345);
 
 void displaySensorDetails(void)
@@ -78,17 +83,18 @@ float geoDistance(struct GeoLoc &a, struct GeoLoc &b) {
 // Where the ping distances are stored.
 unsigned int cm[SONAR_NUM]; // Store ping distances.
 
+
+NewPing sonar[SONAR_NUM] = { // Sensor object array.
+  NewPing(TRIGGER1, ECHO1, MAX_DISTANCE),
+  NewPing(TRIGGER2, ECHO2, MAX_DISTANCE),
+  NewPing(TRIGGER3, ECHO3, MAX_DISTANCE)
+};
+
 //Declare Servos and Motors
 Servo servo1; //servo1
 Servo servo2; //servo2
 Servo motor1; //motor1
 Servo motor2; //motor2
-
-NewPing sonar[SONAR_NUM] = { // Sensor object array.
-  NewPing(40, 41, MAX_DISTANCE),
-  NewPing(42, 43, MAX_DISTANCE),
-  NewPing(44, 45, MAX_DISTANCE)
-};
 
 void setup() {
   pinMode(TRIGGER1, OUTPUT);
@@ -100,11 +106,11 @@ void setup() {
   // Open serial communications
   Serial.begin(115200);
   GPS.begin(9600);
-  //Bluetooth 
+  // Open Bluetooth communications
   bluetoothSerial.begin(9600);
-  
+  // Connect to the Blynk App
   Blynk.begin(bluetoothSerial, auth);
-
+  // Clears off all data that was previously showing on the Blynk app terminal
   terminal.clear();
   
   servo1.attach(SERVO1);  // attaches servo1 to its defined pin
@@ -138,7 +144,7 @@ void setup() {
   // Set the update rate
   GPS.sendCommand(PMTK_SET_NMEA_UPDATE_1HZ);   // 1 Hz update rate
 
-  // Request updates on antenna status, comment out to keep quiet
+  // Request updates on antenna status, comment out if you are not using an antenna
   GPS.sendCommand(PGCMD_ANTENNA);
   
   useInterrupt(true);
@@ -178,7 +184,7 @@ void useInterrupt(boolean v) {
 uint32_t timer = millis();
 
 void gps1() {
-    if (! usingInterrupt) {
+    if (!usingInterrupt) {
       // read data from the GPS in the 'main loop'
       char c = GPS.read();
       // if you want to debug, this is a good time to do it!
@@ -186,7 +192,7 @@ void gps1() {
         if (c) Serial.print(c);
     }
   
-    // if a sentence is received, we can check the checksum, parse it...
+    // if a sentence is received, we can parse it
     if (GPS.newNMEAreceived()) {
       // a tricky thing here is if we print the NMEA sentence, or data
       // we end up not listening and catching other sentences! 
@@ -198,6 +204,7 @@ void gps1() {
     }
 
     // if millis() or timer wraps around, we'll just reset it
+    // Uncomment below if you want to see all of the GPS data being retrieved
 /*    if (timer > millis())  timer = millis();
 
     // approximately every 2 seconds or so, print out the current stats
@@ -220,8 +227,6 @@ void gps1() {
         Serial.print(GPS.latitude, 4); Serial.print(GPS.lat);
         Serial.print(", "); 
         Serial.print(GPS.longitude, 4); Serial.println(GPS.lon);
-      
-          
         Serial.print("Speed (knots): "); Serial.println(GPS.speed);
         Serial.print("Angle: "); Serial.println(GPS.angle);
         Serial.print("Altitude: "); Serial.println(GPS.altitude);
@@ -232,18 +237,17 @@ void gps1() {
   
   //start compass code
 float Heading() {
-    /* Get a new sensor event */ 
+    // Get a new sensor event
     sensors_event_t event; 
     mag.getEvent(&event);
  
-    /* Display the results (magnetic vector values are in micro-Tesla (uT)) */
+    // Display the results (magnetic vector values are in micro-Tesla (uT))
     Serial.print("X: "); Serial.print(event.magnetic.x); Serial.print("  ");
     Serial.print("Y: "); Serial.print(event.magnetic.y); Serial.print("  ");
     Serial.print("Z: "); Serial.print(event.magnetic.z); Serial.print("  ");Serial.println("uT");
     terminal.print("X: "); terminal.print(event.magnetic.x); terminal.print("  ");
     terminal.print("Y: "); terminal.print(event.magnetic.y); terminal.print("  ");
     terminal.print("Z: "); terminal.print(event.magnetic.z); terminal.print("  ");terminal.println("uT");
-    //delay(500);
     terminal.flush();
     
     // Hold the module so that Z is pointing 'up' and you can measure the heading with x&y
@@ -271,7 +275,7 @@ float Heading() {
 void Sonar()
 {
   for (uint8_t i = 0; i < SONAR_NUM; i++) { // Loop through each sensor and display results.
-    delay(50); // Wait 50ms between pings (about 20 pings/sec). 29ms should be the shortest delay between pings.
+    delay(PING_INTERVAL); // Currently set to wait 50ms between pings (about 20 pings/sec). 29ms should be the shortest delay between pings.
     if (sonar[i].ping_cm() == 0) {
       cm[i] = MAX_DISTANCE;
     }
@@ -320,7 +324,7 @@ void drive(int distance, float turn) {
   while (t >  180) t -= 180;
   // drive to location
   int s = fullSpeed;
-  if ( distance < 8 ) {
+  if (distance < 8) {
     int wouldBeSpeed = s - stopSpeed;
     wouldBeSpeed *= distance / 8.0f;
     if (turn > 180 || turn < -180) {
@@ -346,8 +350,8 @@ void drive(int distance, float turn) {
   else if (t > 160) {
    t = 160; 
   }
-  left = t - (90-POS_LEFT);
-  right = t - (90-POS_RIGHT);
+  left = t - (90 - POS_LEFT);
+  right = t - (90 - POS_RIGHT);
 
   servo1.write(left);
   servo2.write(right);
@@ -384,7 +388,7 @@ void go(struct GeoLoc &loc, int timeout) {
   }
   
   Serial.println("Reading onboard GPS: ");
-  Serial.print(robotLoc.Lat, 4); Serial.print(", "); Serial.println(robotLoc.Lon, 4);
+  Serial.print(robotLoc.Lat, 7); Serial.print(", "); Serial.println(robotLoc.Lon, 7);
 
   terminal.println("Reading onboard GPS: ");
   terminal.print(robotLoc.Lat); terminal.print(", "); terminal.println(robotLoc.Lon);
@@ -394,22 +398,21 @@ void go(struct GeoLoc &loc, int timeout) {
   if (robotLoc.Lat != 0 && robotLoc.Lon != 0) {
     float d = 0;
     //Start move loop here
-    //do {
       gps1();
       robotLoc.Lat = GPS.latitude;
-      degWhole = float(int(robotLoc.Lat/100)); //gives me the whole degree part of Latitude
-      degDec = (robotLoc.Lat - degWhole*100)/60; //give me fractional part of latitudde
-      robotLoc.Lat = degWhole + degDec; //Gives complete correct decimal form of latitude degrees
-      if (GPS.lat == 'S') { //If in Southern Hemisphere, latitude should be negative
+      degWhole = float(int(robotLoc.Lat/100)); // Gives the whole degrees part of latitude
+      degDec = (robotLoc.Lat - degWhole*100)/60; // Gives the fractional part of latitudde
+      robotLoc.Lat = degWhole + degDec; // Gives complete correct decimal form of latitude degrees
+      if (GPS.lat == 'S') { // If in Southern Hemisphere, latitude should be negative
         robotLoc.Lat = -robotLoc.Lat;
       }
   
       robotLoc.Lon = GPS.longitude;
-      degWhole = float(int(robotLoc.Lon/100)); //gives me the whole degree part of Longitude
-      degDec = (robotLoc.Lon - degWhole*100)/60; //give me fractional part of longitude
-      robotLoc.Lon = degWhole + degDec; //Gives complete correct decimal form of Longitude degrees
+      degWhole = float(int(robotLoc.Lon/100)); // Gives the whole degree part of longitude
+      degDec = (robotLoc.Lon - degWhole*100)/60; // Give the fractional part of longitude
+      robotLoc.Lon = degWhole + degDec; // Gives complete correct decimal form of longitude degrees
   
-      if (GPS.lon == 'W') { //If in Western Hemisphere, longitude should be negative
+      if (GPS.lon == 'W') { // If in Western Hemisphere, longitude should be negative
         robotLoc.Lon = -robotLoc.Lon;
       }
   
@@ -438,11 +441,6 @@ void go(struct GeoLoc &loc, int timeout) {
       
       drive(d, t);
       timeout -= 1;
-    /*} while (d > 3.0 && timeout > 0);
-      servo1.write(128);
-      servo2.write(128);
-      motor1.writeMicroseconds(1500);
-      motor2.writeMicroseconds(1500);*/
   }
   terminal.flush();
 }
@@ -559,16 +557,18 @@ BLYNK_WRITE(V0) {
       //delay(SLIGHT_TURN);
     }
   }
+  else if ((joystick_x==90)&&(joystick_y==1500)){
+  }
   else
   {
     GpsParam gps(param);
   
     Serial.println("Received remote GPS: ");
-    // Print 4 decimal places for Lat and Lon
-    Serial.print(gps.getLat(), 4); Serial.print(", "); Serial.println(gps.getLon(), 4);
+    // Print 7 decimal places for Lat and Lon
+    Serial.print(gps.getLat(), 7); Serial.print(", "); Serial.println(gps.getLon(), 7);
 
     terminal.println("Received remote GPS: ");
-    // Print 4 decimal places for Lat and Lon
+    // Print 7 decimal places for Lat and Lon
     terminal.print(gps.getLat()); terminal.print(", "); terminal.println(gps.getLon());
     
     terminal.flush();
@@ -621,24 +621,29 @@ BLYNK_WRITE(V1) {
 }
 
 BLYNK_WRITE(V2) {
-  int left = 0;
-  int right = 0;
-  int x = param[0].asInt();
-  int y = param[1].asInt();
-  while ((x!=90)&&(y!=1500)){
-    left = x - (90-POS_LEFT);
-    right = x - (90-POS_RIGHT);
+  int left = 90;
+  int right = 90;
+  int Speed = 1500;
+  joystick_x = param[0].asInt();
+  joystick_y = param[1].asInt();
+  int joystick_y1;
 
+  if ((joystick_x!=90)&&(joystick_y!=1500))
+  {
+    left = joystick_x - (90-POS_LEFT);
+    right = joystick_x - (90-POS_RIGHT);
     servo1.write(left);
     servo2.write(right);
-    motor1.writeMicroseconds(y);
-    motor2.writeMicroseconds(y);
-    // Do something with x and y
+    if
+    motor1.writeMicroseconds(joystick_y);
+    motor2.writeMicroseconds(joystick_y);
+    // Printing x and y values helps for debugging of the joystick
     Serial.print("X = ");
-    Serial.print(x);
+    Serial.print(joystick_x);
     Serial.print("; Y = ");
-    Serial.println(y);
-    delay(100);
+    Serial.println(joystick_y);
+    joystick_x = param[0].asInt();
+    joystick_y = param[1].asInt();
   }
 }
 
